@@ -63,6 +63,20 @@
         "typeinfo": "cpp",
         "variant": "cpp",
         "cassert": "cpp",
-        "any": "cpp"
+        "any": "cpp",
+        "iomanip": "cpp",
+        "csignal": "cpp",
+        "codecvt": "cpp",
+        "complex": "cpp",
+        "list": "cpp",
+        "set": "cpp",
+        "buffer": "cpp",
+        "executor": "cpp",
+        "internet": "cpp",
+        "io_context": "cpp",
+        "netfwd": "cpp",
+        "socket": "cpp",
+        "timer": "cpp",
+        "typeindex": "cpp"
     }
 }
