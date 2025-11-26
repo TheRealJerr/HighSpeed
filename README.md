@@ -1,5 +1,9 @@
 # High Speed
 
+## **注意**
+
+这个项目没有任何的依赖, 唯一的依赖就是C++20的编译器, 所以需要使用C++20的编译器才能编译通过。
+
 ## ✅ alloc/alloc.hpp : 内存池模块
 
 效仿TcMalloc实现的简易的内存池, 但是没有TcMalloc分为三层的那么复杂, 思路大概一直, ThreadSafeMemoryPool是线程安全的线程私有内存池, 而GlobalMemoryPool是全局的内存池, 两者都实现了分配和释放内存的接口。
