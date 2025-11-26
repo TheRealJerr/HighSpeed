@@ -1,3 +1,0 @@
-/home/hrj/coro-cpp-20/build/CMakeFiles/coro-cpp-20.dir
-/home/hrj/coro-cpp-20/build/CMakeFiles/edit_cache.dir
-/home/hrj/coro-cpp-20/build/CMakeFiles/rebuild_cache.dir
