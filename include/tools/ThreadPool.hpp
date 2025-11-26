@@ -17,16 +17,18 @@
 #include <alloc/alloc.hpp>
 
 
-
+namespace hspd {
 class ThreadPool;
+}
 
-namespace std
-{
+namespace std {
     template <>
-    struct default_delete<ThreadPool> {
-        void operator()(ThreadPool* ptr) const;
+    struct default_delete<hspd::ThreadPool> {
+        void operator()(hspd::ThreadPool* ptr) const;
     };
 }
+
+namespace hspd {
 
 class ThreadPool
 {
@@ -240,10 +242,7 @@ void ThreadPool::stopHard() {
 }
 
 // 定制化析构函数
-void std::default_delete<ThreadPool>::operator()(ThreadPool* ptr) const {
-    ptr->stop();
-    delete ptr;
-}
+
 
 // 通过工厂模式创建一个线程池
 using ThreadPoolPtr = std::shared_ptr<ThreadPool>;
@@ -258,5 +257,12 @@ public:
 
 // 定义一个默认的全局的线程池
 inline static auto gThreadPool = ThreadPoolFactory::createThreadPool();
+
+} // namespace hspd
+
+void std::default_delete<hspd::ThreadPool>::operator()(hspd::ThreadPool* ptr) const {
+    ptr->stop();
+    delete ptr;
+}
 
 #endif

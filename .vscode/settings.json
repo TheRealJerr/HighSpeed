@@ -77,6 +77,7 @@
         "netfwd": "cpp",
         "socket": "cpp",
         "timer": "cpp",
-        "typeindex": "cpp"
+        "typeindex": "cpp",
+        "fstream": "cpp"
     }
 }
