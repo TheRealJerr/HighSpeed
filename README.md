@@ -362,3 +362,49 @@ int main() {
 }
 
 ```
+## ✅ 日志模块
+
+### 📌 log/Log.hpp log/format.hpp
+
+我们可以通过工厂创建一个属于用户自身的日志类型, 日志类型可以设置日志级别, 输出方式, 输出文件路径等。
+
+同时, 我们也定义了全局的日志器, 方便用户使用, 用户可以通过单例接口获取到全局的日志器, 并设置日志级别, 输出方式, 输出文件路径等。
+
+**通过全局的日志锁保证了打印日志的线程安全性**
+
+**示例代码**
+1. 创建用户自己的日志器
+    ```cpp
+    auto stdLogger = LoggerFactory::createLogger<StdLogger>();
+    auto fileLogger = LoggerFactory::createLogger<FileLogger>("./test_log.txt");
+    ```
+
+
+2. 利用全局的日志器
+    ```cpp
+    // 创建 GlobalLogger 实例
+    GlobalLogger& logger = GlobalLogger::instance();
+    // 设置日志级别为 DEBUG
+    logger.setLogLevel(LogLevel::DEBUG);
+    // 设置日志输出方式为标准输出
+    logger.setLogChoice(hspd::Choice::STDOUT);
+    // 测试不同级别的日志输出
+    logger.debug("This is a debug message with value: {}", 42);
+    logger.info("This is an info message with value: {}", 42);
+    logger.warn("This is a warning message with value: {}", 42);
+    logger.error("This is an error message with value: {}", 42);
+    logger.fatal("This is a fatal message with value: {}", 42);
+    // 设置日志输出方式为文件输出，并指定文件路径
+    logger.setLogChoice(hspd::Choice::FILE);
+    logger.setFilePath("./test_log.txt");
+    // 测试不同级别的日志输出到文件
+    logger.debug("This is a debug message with value: {}", 42);
+    logger.info("This is an info message with value: {}", 42);
+    logger.warn("This is a warning message with value: {}", 42);
+    logger.error("This is an error message with value: {}", 42);
+    logger.fatal("This is a fatal message with value: {}", 42);
+    // 设置日志级别为 INFO，测试是否过滤掉 DEBUG 级别的日志
+    logger.setLogLevel(hspd::LogLevel::INFO);
+    logger.debug("This debug message should not appear in the file.");
+    logger.info("This info message should appear in the file.");
+    ```

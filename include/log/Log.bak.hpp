@@ -58,9 +58,7 @@ namespace hspd {
 
     constexpr std::string_view kLogFormat = "[{level}]:[{time}]:[{file}]:[{line}]:[{message}]";
 
-
-
-    template <class DerivedLogger> 
+    template <class DerivedLogger>
     class Logger {
     public:
         Logger(LogFormat format, LogLevel min_level) : format_(std::move(format)), min_level_(min_level) {}
@@ -165,124 +163,8 @@ namespace hspd {
         }
     };
 
-    enum class Choice
-    {
-        STDOUT,
-        FILE,
-        NONE,
-    };
+
     
-
-    class GlobalLogger {
-        // 构造函数
-        GlobalLogger() {
-            if (g_choice == Choice::STDOUT && g_logger == nullptr)
-                g_logger = LoggerFactory::createLogger<StdoutLogger>(kLogFormat, g_min_level);
-            if (g_choice == Choice::FILE && g_file_logger == nullptr)
-                g_file_logger = LoggerFactory::createLogger<FileLogger>(kLogFormat, g_min_level, g_file_path);
-        }
-
-        void flush() {
-            if (g_choice == Choice::STDOUT)
-                g_logger = LoggerFactory::createLogger<StdoutLogger>(kLogFormat, g_min_level);
-            else if (g_choice == Choice::FILE)
-                g_file_logger = LoggerFactory::createLogger<FileLogger>(kLogFormat, g_min_level, g_file_path);
-        }
-
-    public:
-        static GlobalLogger& instance() {
-            if (g_instance == nullptr) {
-                g_instance.reset(new GlobalLogger());
-            }
-            return *g_instance;
-        }
-
-        void setLogLevel(LogLevel level) {
-            if (g_min_level == level)
-                return;
-            g_min_level = level;
-            flush();
-        }
-
-        void setLogFile(const std::string& file_path) {
-            if (g_file_path == file_path)
-                return;
-            g_file_path = file_path;
-            flush();
-        }
-
-        void setLogChoice(Choice choice) {
-            if (g_choice == choice)
-                return;
-            g_choice = choice;
-            flush();
-        }
-
-        void setFilePath(const std::string& file_path) {
-            if (g_file_path == file_path)
-                return;
-            g_file_path = file_path;
-            flush();
-        }
-
-        template <typename ...Args>
-        void debug(std::string_view fmt, Args&&... args) {
-            if (g_choice == Choice::STDOUT)
-                g_logger->log(LogLevel::DEBUG, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
-            else if (g_choice == Choice::FILE)
-                g_file_logger->log(LogLevel::DEBUG, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
-        }
-
-        template <typename ...Args>
-        void release(std::string_view fmt, Args&&... args) {
-            if (g_choice == Choice::STDOUT)
-                g_logger->log(LogLevel::RELEASE, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
-            else if (g_choice == Choice::FILE)
-                g_file_logger->log(LogLevel::RELEASE, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
-        }
-
-        template <typename ...Args>
-        void info(std::string_view fmt, Args&&... args) {
-            if (g_choice == Choice::STDOUT)
-                g_logger->log(LogLevel::INFO, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
-            else if (g_choice == Choice::FILE)
-                g_file_logger->log(LogLevel::INFO, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
-        }
-
-        template <typename ...Args>
-        void warn(std::string_view fmt, Args&&... args) {
-            if (g_choice == Choice::STDOUT)
-                g_logger->log(LogLevel::WARN, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
-            else if (g_choice == Choice::FILE)
-                g_file_logger->log(LogLevel::WARN, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
-        }
-
-        template <typename ...Args>
-        void error(std::string_view fmt, Args&&... args) {
-            if (g_choice == Choice::STDOUT)
-                g_logger->log(LogLevel::ERROR, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
-            else if (g_choice == Choice::FILE)
-                g_file_logger->log(LogLevel::ERROR, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
-        }
-
-        template <typename ...Args>
-        void fatal(std::string_view fmt, Args&&... args) {
-            if (g_choice == Choice::STDOUT)
-                g_logger->log(LogLevel::FATAL, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
-            else if (g_choice == Choice::FILE)
-                g_file_logger->log(LogLevel::FATAL, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
-        }
-
-    private:
-        std::shared_ptr<Logger<StdoutLogger>> g_logger = nullptr;
-        std::shared_ptr<Logger<FileLogger>> g_file_logger = nullptr;
-        Choice g_choice = Choice::STDOUT;
-        std::string g_file_path = "./log.txt";
-        inline static std::unique_ptr<GlobalLogger> g_instance = nullptr;
-        LogLevel g_min_level = LogLevel::DEBUG;
-    };
-
-
 
 } // namespace hspd
 
