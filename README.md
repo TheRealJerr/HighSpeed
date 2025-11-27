@@ -226,6 +226,28 @@ std::this_thread::sleep_for(std::chrono::seconds(1));
 
 我们定义了全局的线程池`gThreadPool`, 因此在程序中只需要调用`gThreadPool->addTask`即可, 而不需要创建线程池对象。当然用户也可以自定义的创建自己的线程池。
 
+### 📌 tools/Strand.hpp
+
+**Strand**
+
+用于串行化异步操作, 保证异步操作的顺序执行, 防止竞争条件。
+
+**示例代码**
+
+```cpp
+gThreadPool->run();
+Strand strand = makeStrand(gThreadPool.get());
+
+for(int i = 0;i < 100;i++)
+{
+    strand.addTask([i](){
+        std::cout << "这是任务:" << i << std::endl;
+    });
+}
+
+std::cout << "主线程等待" << std::endl;
+std::this_thread::sleep_for(std::chrono::seconds(3));
+```
 
 ## ✅ coro协程模块
 
