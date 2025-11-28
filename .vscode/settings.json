@@ -78,6 +78,10 @@
         "socket": "cpp",
         "timer": "cpp",
         "typeindex": "cpp",
-        "fstream": "cpp"
+        "fstream": "cpp",
+        "strstream": "cpp",
+        "span": "cpp",
+        "cfenv": "cpp",
+        "valarray": "cpp"
     }
 }

@@ -15,7 +15,7 @@
 #include <type_traits>
 #include <memory>
 #include <alloc/alloc.hpp>
-
+#include <log/Log.hpp>
 
 namespace hspd {
 class ThreadPool;
@@ -129,12 +129,11 @@ void ThreadPool::_addTask(task_t task)
 void ThreadPool::run()
 {
     if (running_.exchange(true)) {
-        std::cout << "ThreadPool is already running" << std::endl;
+        
         return;
     }
     
-    // 创建线程池
-    std::cout << "Starting ThreadPool with " << THREADS_NUM << " threads" << std::endl;
+    
     for (size_t i = 0; i < THREADS_NUM; ++i) {
         threads_.emplace_back([this]() {
             this->worker();
@@ -143,7 +142,6 @@ void ThreadPool::run()
 }
 
 void ThreadPool::worker() {
-    std::cout << "Worker thread " << std::this_thread::get_id() << " started" << std::endl;
     
     while (true) {
         task_t task;
@@ -159,7 +157,6 @@ void ThreadPool::worker() {
             
             // 检查退出条件
             if (!running_.load() && task_queue_.empty()) {
-                std::cout << "Worker thread " << std::this_thread::get_id() << " exiting" << std::endl;
                 return;
             }
             
@@ -176,9 +173,9 @@ void ThreadPool::worker() {
             try {
                 task();
             } catch (const std::exception& e) {
-                std::cerr << "Exception in worker thread: " << e.what() << std::endl;
+                LOG_ERROR("Exception in worker thread: {}", e.what());
             } catch (...) {
-                std::cerr << "Unknown exception in worker thread" << std::endl;
+                LOG_ERROR("Unknown exception in worker thread");
             }
         }
     }
@@ -187,11 +184,9 @@ void ThreadPool::worker() {
 // 停止调度器，等待所有任务完成
 void ThreadPool::stop() {
     if (!running_.exchange(false)) {
-        std::cout << "ThreadPool is already stopped" << std::endl;
         return;
     }
     
-    std::cout << "Stopping ThreadPool..." << std::endl;
     
     // 通知所有等待的线程
     cv_.notify_all();
@@ -214,18 +209,16 @@ void ThreadPool::stop() {
         }
     }
     
-    std::cout << "ThreadPool stopped successfully" << std::endl;
+    LOG_INFO("ThreadPool stopped");
 }
 
 // 强制停止调度器，不等待任务完成
 void ThreadPool::stopHard() {
     if (!running_.exchange(false)) {
-        std::cout << "ThreadPool is already stopped" << std::endl;
         return;
     }
     
-    std::cout << "Stopping ThreadPool forcefully..." << std::endl;
-    
+    LOG_INFO("ThreadPool stopping forcefully");
     // 通知所有等待的线程
     cv_.notify_all();
     
@@ -238,7 +231,6 @@ void ThreadPool::stopHard() {
     
     threads_.clear();
     
-    std::cout << "ThreadPool stopped forcefully" << std::endl;
 }
 
 // 定制化析构函数

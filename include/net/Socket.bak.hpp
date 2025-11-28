@@ -265,7 +265,7 @@ public:
         if (listen(listenfd_, SOMAXCONN) < 0)
             throw std::system_error(errno, std::system_category(), "listen failed");
 
-        // 将监听套接字注册到 epoll 模型中
+        // 注册到 epoll（IOContext 封装了 epoll via ev()）
         ctx_->add_fd(listenfd_, EPOLLIN);
     }
 
@@ -300,8 +300,8 @@ public:
         : sockfd_(fd), ctx_(ctx)
     {
         if (sockfd_ >= 0) {
-            // 连接到来了, 我只关注读
-            ctx_->add_fd(sockfd_, EPOLLIN);
+            // 初识的时候, 注册到epoll, 但是不关注读和写, 只是注册到 epoll
+            ctx_->add_fd(sockfd_, 0);
         }
     }
 
@@ -326,22 +326,11 @@ public:
     // 协程读：立刻尝试 readFd，EAGAIN 则 co_await ctx_->await_fd(fd, EPOLLIN)
     Awaitable<size_t> async_read(Buffer& buffer) {
         while (true) {
-            // 当dispatch调度我的时候, 我直接开始读, 直接将内容全部读完
             int saveErr = 0;
             auto n = buffer.readFd(sockfd_, &saveErr);
-            if (n >= 0) 
-            {
-                // 这里的问题就是, 可能没有没有注册对应的调度协程, 可能出现空转
-                // 只要读到了内容
-                // 我现在只关注写
-                ctx_->modify_fd(sockfd_, EPOLLOUT);
-                LOG_INFO("{} async_read : {} bytes", sockfd_, n);
-                co_return static_cast<size_t>(n);
-            }
+            if (n >= 0) co_return static_cast<size_t>(n);
 
             if (saveErr == EAGAIN || saveErr == EWOULDBLOCK) {
-                // 如果读取没有立马就绪, 我们就将对应的读取写成进行注入
-                LOG_INFO("{} async_read EAGAIN : ", sockfd_);
                 co_await ctx_->await_fd(sockfd_, EPOLLIN);
                 // 事件就绪后再循环尝试读取
                 continue;
@@ -353,16 +342,9 @@ public:
 
     Awaitable<size_t> async_write(Buffer& buffer) {
         while (true) {
-            // 做一个特殊的判断
-            if(buffer.readableBytes() == 0)
-                co_return 0;
             int saveErr = 0;
             auto n = buffer.writeFd(sockfd_, &saveErr);
-            if (n >= 0) 
-            {
-                LOG_INFO("{} async_write : {} bytes", sockfd_, n);
-                co_return static_cast<size_t>(n);
-            }
+            if (n >= 0) co_return static_cast<size_t>(n);
 
             if (saveErr == EAGAIN || saveErr == EWOULDBLOCK) {
                 co_await ctx_->await_fd(sockfd_, EPOLLOUT);
@@ -391,17 +373,15 @@ inline Awaitable<Socket> Acceptor::async_accept()
 {
     while (true) {
         int cfd = ::accept4(listenfd_, nullptr, nullptr, SOCK_NONBLOCK);
-        // 监听成功
         if (cfd >= 0) {
             co_return Socket{ cfd, ctx_ };
         }
-        // 非阻塞监听失败, 
+
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            // 挂起协程, 等待epoll模型的下一次调用
             co_await ctx_->await_fd(listenfd_, EPOLLIN);
             continue;
         }
-        // handle Error
+
         throw std::system_error(errno, std::system_category(), "accept failed");
     }
 }

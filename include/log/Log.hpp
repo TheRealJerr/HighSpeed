@@ -226,51 +226,51 @@ namespace hspd {
         }
 
         template <typename ...Args>
-        void debug(std::string_view fmt, Args&&... args) {
+        void debug(std::string_view fmt, const std::string& file, int line, Args&&... args) {
             if (g_choice == Choice::STDOUT)
-                g_logger->log(LogLevel::DEBUG, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
+                g_logger->log(LogLevel::DEBUG, file, line, fmt, std::forward<Args>(args)...);
             else if (g_choice == Choice::FILE)
-                g_file_logger->log(LogLevel::DEBUG, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
+                g_file_logger->log(LogLevel::DEBUG, file, line, fmt, std::forward<Args>(args)...);
         }
 
         template <typename ...Args>
-        void release(std::string_view fmt, Args&&... args) {
+        void release(std::string_view fmt, const std::string& file, int line, Args&&... args) {
             if (g_choice == Choice::STDOUT)
-                g_logger->log(LogLevel::RELEASE, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
+                g_logger->log(LogLevel::RELEASE, file, line, fmt, std::forward<Args>(args)...);
             else if (g_choice == Choice::FILE)
-                g_file_logger->log(LogLevel::RELEASE, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
+                g_file_logger->log(LogLevel::RELEASE, file, line, fmt, std::forward<Args>(args)...);
         }
 
         template <typename ...Args>
-        void info(std::string_view fmt, Args&&... args) {
+        void info(std::string_view fmt, const std::string& file, int line, Args&&... args) {
             if (g_choice == Choice::STDOUT)
-                g_logger->log(LogLevel::INFO, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
+                g_logger->log(LogLevel::INFO, file, line, fmt, std::forward<Args>(args)...);
             else if (g_choice == Choice::FILE)
-                g_file_logger->log(LogLevel::INFO, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
+                g_file_logger->log(LogLevel::INFO, file, line, fmt, std::forward<Args>(args)...);
         }
 
         template <typename ...Args>
-        void warn(std::string_view fmt, Args&&... args) {
+        void warn(std::string_view fmt, const std::string& file, int line, Args&&... args) {
             if (g_choice == Choice::STDOUT)
-                g_logger->log(LogLevel::WARN, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
+                g_logger->log(LogLevel::WARN, file, line, fmt, std::forward<Args>(args)...);
             else if (g_choice == Choice::FILE)
-                g_file_logger->log(LogLevel::WARN, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
+                g_file_logger->log(LogLevel::WARN, file, line, fmt, std::forward<Args>(args)...);
         }
 
         template <typename ...Args>
-        void error(std::string_view fmt, Args&&... args) {
+        void error(std::string_view fmt, const std::string& file, int line, Args&&... args) {
             if (g_choice == Choice::STDOUT)
-                g_logger->log(LogLevel::ERROR, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
+                g_logger->log(LogLevel::ERROR, file, line, fmt, std::forward<Args>(args)...);
             else if (g_choice == Choice::FILE)
-                g_file_logger->log(LogLevel::ERROR, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
+                g_file_logger->log(LogLevel::ERROR, file, line, fmt, std::forward<Args>(args)...);
         }
 
         template <typename ...Args>
-        void fatal(std::string_view fmt, Args&&... args) {
+        void fatal(std::string_view fmt, const std::string& file, int line, Args&&... args) {
             if (g_choice == Choice::STDOUT)
-                g_logger->log(LogLevel::FATAL, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
+                g_logger->log(LogLevel::FATAL, file, line, fmt, std::forward<Args>(args)...);
             else if (g_choice == Choice::FILE)
-                g_file_logger->log(LogLevel::FATAL, __FILE__, __LINE__, fmt, std::forward<Args>(args)...);
+                g_file_logger->log(LogLevel::FATAL, file, line, fmt, std::forward<Args>(args)...);
         }
 
     private:
@@ -282,6 +282,27 @@ namespace hspd {
         LogLevel g_min_level = LogLevel::DEBUG;
     };
 
+// 定义宏, 支持无参数
+
+#define LOG_DEBUG(fmt, ...) hspd::GlobalLogger::instance().debug(fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define LOG_RELEASE(fmt, ...) hspd::GlobalLogger::instance().release(fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define LOG_INFO(fmt, ...) hspd::GlobalLogger::instance().info(fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define LOG_WARN(fmt, ...) hspd::GlobalLogger::instance().warn(fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) hspd::GlobalLogger::instance().error(fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define LOG_FATAL(fmt, ...) hspd::GlobalLogger::instance().fatal(fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+
+
+
+#define ENABLE_LOG_DEBUG() hspd::GlobalLogger::instance().setLogLevel(hspd::LogLevel::DEBUG)
+#define ENABLE_LOG_RELEASE() hspd::GlobalLogger::instance().setLogLevel(hspd::LogLevel::RELEASE)
+#define ENABLE_LOG_INFO() hspd::GlobalLogger::instance().setLogLevel(hspd::LogLevel::INFO)
+#define ENABLE_LOG_WARN() hspd::GlobalLogger::instance().setLogLevel(hspd::LogLevel::WARN)
+#define ENABLE_LOG_ERROR() hspd::GlobalLogger::instance().setLogLevel(hspd::LogLevel::ERROR)
+#define ENABLE_LOG_FATAL() hspd::GlobalLogger::instance().setLogLevel(hspd::LogLevel::FATAL)
+
+#define ENABLE_LOG_FILE(FILE_PATH) \
+    hspd::GlobalLogger::instance().setLogFile(FILE_PATH); \
+    hspd::GlobalLogger::instance().setLogChoice(hspd::Choice::FILE) \
 
 
 } // namespace hspd

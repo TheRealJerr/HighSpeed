@@ -338,48 +338,79 @@ int wait(struct epoll_event* events, int max_events, int timeout);
 **示例代码**
 
 ```cpp
-// 测试网络板块
-#include <net/Socket.hpp>
-#include <tools/ThreadPool.hpp>
 #include <iostream>
+#include <memory>
+#include <string>
 
-Epoll* gEpoll = new Epoll();
+#include <tools/ThreadPool.hpp>
+#include <net/Epoll.hpp>
+#include <tools/IOContext.hpp>
+#include <net/Socket.hpp>
+#include <Coro/Awaitable.hpp>
+#include <io/Buffer.hpp>
+#include <log/Log.hpp>
 
-Awaitable<void> test_socket(Socket socket) {
-    Buffer buffer;
-    size_t n = co_await socket.async_read(buffer);
-    std::cout << "read " << n << " bytes" << std::endl;
-    n = co_await socket.async_write(buffer);
-    std::cout << "write " << n << " bytes" << std::endl;
-    socket.close();
+using namespace hspd;
+
+// handle client coroutine
+Awaitable<void> handle_client(Socket client) {
+    Buffer buf;
+    int fd = client.fd();
+    size_t n = co_await client.async_read(buf);
+
+    if (n == 0) {
+        // EOF or closed: exit coroutine
+        LOG_INFO("client fd {} closed", fd);
+        client.close();
+        co_return;
+    }
+
+    // get data as string for demo (Buffer::retrieveAllAsString assumed)
+    std::string s = buf.retrieveAllAsString();
+    LOG_INFO("received from fd {}: {}", fd, s);
+
+    // echo back
+    const std::string html_str = "<html><body><h1>Hello, world!</h1></body></html>";
+    buf.append(html_str.c_str(), html_str.size());
+    co_await client.async_write(buf);
+
+    client.close();
 }
 
-Awaitable<void> test_server() {
-    Acceptor acceptor(gThreadPool.get(), EndPoint{"0.0.0.0", 8080}, gEpoll);
-    struct epoll_event events[10];
-
+// accept loop coroutine
+Awaitable<void> accept_loop(Acceptor* acc) {
+    IOContext* ctx = acc->context();
     while (true) {
-        int nfds = gEpoll->wait(events, 10, -1);
-        for (int i = 0; i < nfds; ++i) {
-            if (events[i].data.fd == acceptor.fd()) {
-                Socket socket = co_await acceptor.async_accept();
-                if (socket.fd() >= 0) {
-                    co_spawn(*gThreadPool, test_socket(std::move(socket)));
-                }
-            } else {
-                // 处理已连接的套接字事件
-                // 这里可以添加逻辑来处理具体的读写事件
-            }
-        }
+        Socket client = co_await acc->async_accept();
+        LOG_DEBUG("accepted new client fd={}", client.fd());
+        // spawn a handler coroutine via IOContext; IOContext::co_spawn will inject ThreadPool* and schedule
+        ctx->co_spawn(handle_client(std::move(client)));
     }
 }
 
 int main() {
 
-    gThreadPool->run();    
-    co_spawn(*gThreadPool, test_server());
+    // create a threadpool (2 worker threads)
+    auto pool = ThreadPoolFactory::createThreadPool();
 
-    std::cin.get();
+    // create epoll
+    auto ep = std::make_unique<Epoll>();
+
+    // create IOContext with pool and epoll
+    IOContext io(pool.get(), ep.get());
+
+    // create acceptor on port 8080
+    Acceptor acc(&io, EndPoint{"0.0.0.0", 8080});
+
+    // start threadpool workers
+    pool->run();
+
+    // start accept coroutine (scheduled on threadpool via IOContext::co_spawn)
+    io.co_spawn(accept_loop(&acc));
+
+    // run epoll loop in main thread
+    io.run();
+
     return 0;
 }
 
@@ -430,3 +461,26 @@ int main() {
     logger.debug("This debug message should not appear in the file.");
     logger.info("This info message should appear in the file.");
     ```
+3. 全局宏
+
+```cpp
+#define LOG_DEBUG(fmt, ...) hspd::GlobalLogger::instance().debug(fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define LOG_RELEASE(fmt, ...) hspd::GlobalLogger::instance().release(fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define LOG_INFO(fmt, ...) hspd::GlobalLogger::instance().info(fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define LOG_WARN(fmt, ...) hspd::GlobalLogger::instance().warn(fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) hspd::GlobalLogger::instance().error(fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define LOG_FATAL(fmt, ...) hspd::GlobalLogger::instance().fatal(fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+
+
+
+#define ENABLE_LOG_DEBUG() hspd::GlobalLogger::instance().setLogLevel(hspd::LogLevel::DEBUG)
+#define ENABLE_LOG_RELEASE() hspd::GlobalLogger::instance().setLogLevel(hspd::LogLevel::RELEASE)
+#define ENABLE_LOG_INFO() hspd::GlobalLogger::instance().setLogLevel(hspd::LogLevel::INFO)
+#define ENABLE_LOG_WARN() hspd::GlobalLogger::instance().setLogLevel(hspd::LogLevel::WARN)
+#define ENABLE_LOG_ERROR() hspd::GlobalLogger::instance().setLogLevel(hspd::LogLevel::ERROR)
+#define ENABLE_LOG_FATAL() hspd::GlobalLogger::instance().setLogLevel(hspd::LogLevel::FATAL)
+
+#define ENABLE_LOG_FILE(FILE_PATH) \
+    hspd::GlobalLogger::instance().setLogFile(FILE_PATH); \
+    hspd::GlobalLogger::instance().setLogChoice(hspd::Choice::FILE) \
+```
