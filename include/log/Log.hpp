@@ -27,7 +27,7 @@ namespace hspd {
         ERROR,
         FATAL,
     };
-
+    
     inline std::string LevelToString(LogLevel level) {
         switch (level) {
             case LogLevel::DEBUG:

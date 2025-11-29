@@ -1,4 +1,4 @@
-#pragma once
+
 #ifndef IOCONTEXT_HPP
 #define IOCONTEXT_HPP
 
@@ -23,8 +23,8 @@ public:
     using EventLoop_t = Epoll;
 
     struct Waiter {
-        std::coroutine_handle<> handle;
-        uint32_t events;
+        std::coroutine_handle<> handle = nullptr;
+        uint32_t events = 0;
     };
 
     IOContext(Scheduler_t* executor, EventLoop_t* ev)
@@ -163,16 +163,20 @@ public:
         LOG_INFO("IOContext: fd {} modified", fd);
     }
 
+    uint32_t get_events(int fd)
+    {
+        std::lock_guard<std::mutex> lock(waitter_mtx_);
+        return waiters_[fd].events;
+    }
 private:
     std::mutex waitter_mtx_;
-    static constexpr int EVENTS_MAX = 64;
+    static inline constexpr int EVENTS_MAX = 64;
     Scheduler_t* executor_;
     EventLoop_t* ev_;
     std::atomic_bool running_;
     std::unordered_map<int, Waiter> waiters_;
     struct epoll_event events_[EVENTS_MAX];
 
-    static inline auto& logger = hspd::GlobalLogger::instance();
 };
 
 } // namespace hspd

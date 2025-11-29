@@ -226,7 +226,7 @@ std::this_thread::sleep_for(std::chrono::seconds(1));
 
 我们定义了全局的线程池`gThreadPool`, 因此在程序中只需要调用`gThreadPool->addTask`即可, 而不需要创建线程池对象。当然用户也可以自定义的创建自己的线程池。
 
-### 📌 tools/Strand.hpp
+### 📌 tools/Strand.hpp, 保证异步操作的顺序执行
 
 **Strand**
 
@@ -249,7 +249,10 @@ std::cout << "主线程等待" << std::endl;
 std::this_thread::sleep_for(std::chrono::seconds(3));
 ```
 
+
+
 ## ✅ coro协程模块
+
 
 ### 📌 coro/Task.hpp 和 coro/Scheduler.hpp 和 coro/Generator.hpp
 
@@ -434,6 +437,7 @@ int main() {
 
 
 2. 利用全局的日志器
+
     ```cpp
     // 创建 GlobalLogger 实例
     GlobalLogger& logger = GlobalLogger::instance();
@@ -483,4 +487,79 @@ int main() {
 #define ENABLE_LOG_FILE(FILE_PATH) \
     hspd::GlobalLogger::instance().setLogFile(FILE_PATH); \
     hspd::GlobalLogger::instance().setLogChoice(hspd::Choice::FILE) \
+```
+
+## ✅ 协议模块
+
+### 📌 protocol/Http.hpp
+
+**Http**
+
+Http协议相关的接口, 包括:
+
+**Http**
+
+接口: 
+
+```cpp
+class HttpMessage : public Message {
+public:
+    virtual ~HttpMessage() = default;
+
+    std::string serialize_to_string() const override;
+    bool parse_from_string(const std::string& str) override;
+    bool parse_from_string(const char* str, size_t len) override;
+
+    const HttpMethod& method() const { return method_; }
+    const HttpVersion& version() const { return version_; }
+    const std::string& url() const { return url_; }
+    const std::unordered_map<std::string, std::string>& headers() const { return headers_; }
+    const std::string& body() const { return body_; }
+
+    void set_method(const HttpMethod& method) { method_ = method; }
+    void set_version(const HttpVersion& version) { version_ = version; }
+    void set_url(const std::string& url) { url_ = url; }
+    void set_headers(const std::unordered_map<std::string, std::string>& headers) { headers_ = headers; }
+    void set_body(const std::string& body) { body_ = body; }
+    void add_header(const std::string& key, const std::string& value) { headers_[key] = value; }
+
+    static HttpMethod parse_method(const std::string& s);
+    static HttpVersion parse_version(const std::string& s);
+    static std::string version_to_str(HttpVersion v);
+    static std::string method_to_str(HttpMethod m);
+};
+```
+
+```cpp
+std::string req =
+        "POST /login HTTP/1.1\r\n"
+        "Host: example.com\r\n"
+        "Content-Type: application/json\r\n"
+        "Content-Length: 18\r\n"
+        "\r\n"
+        "{\"a\":123,\"b\":456}";
+
+    HttpMessage req_msg;
+    if(req_msg.parse_from_string(req))
+    {
+        std::cout << "method: " << HttpMessage::method_to_str(req_msg.method()) << std::endl;
+        std::cout << "version: " << HttpMessage::version_to_str(req_msg.version()) << std::endl;
+        std::cout << "url: " << req_msg.url() << std::endl;
+        for(const auto& [k, v] : req_msg.headers())
+        {
+            std::cout << k << ": " << v << std::endl;
+        }
+        std::cout << "body: " << req_msg.body() << std::endl;
+    }
+
+    HttpMessage msg;
+    msg.set_method(HttpMethod::GET);
+    msg.set_version(HttpVersion::HTTP_1_1);
+    msg.set_url("/index.html");
+    msg.add_header("Host", "localhost");
+    msg.set_body("");
+
+    std::string http = msg.serialize_to_string();
+
+    std::cout << http << std::endl;
 ```
